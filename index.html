@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Otobeesy (Al Assema) - kb</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        window.process = { env: { NODE_ENV: 'production' } };
+    </script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/framer-motion/10.16.4/framer-motion.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #0a0a0b;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+        .luxury-gradient {
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+        }
+        .gold-text {
+            background: linear-gradient(to right, #d4af37, #f9d976, #d4af37);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        .card-3d {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transform-style: preserve-3d;
+        }
+        .card-3d:hover {
+            transform: translateY(-5px) rotateX(5deg) rotateY(5deg);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+        .search-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .search-input:focus {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #d4af37;
+            outline: none;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+        }
+        /* RTL support for Lucide icons */
+        .lucide {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a2a2a;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #d4af37;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // Debugging Helper
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.error('Error: ' + msg + '\nScript: ' + url + '\nLine: ' + lineNo + '\nColumn: ' + columnNo + '\nStackTrace: ' + (error ? error.stack : ''));
+            const errorDiv = document.createElement('div');
+            errorDiv.style.cssText = "position:fixed;top:0;left:0;width:100%;background:red;color:white;padding:20px;z-index:9999;font-family:sans-serif;";
+            errorDiv.innerHTML = "حدث خطأ في تحميل البرنامج: " + msg;
+            document.body.appendChild(errorDiv);
+            return false;
+        };
+
+        const { useState, useEffect, useMemo } = React;
+        const FM = window.FramerMotion || { motion: { div: (props) => <div {...props} /> }, AnimatePresence: ({children}) => children };
+        const { motion, AnimatePresence } = FM;
+
+        // Mock Data for the system
+        const MOCK_DATA = {
+            governorates: [
+                { id: 1, name: 'القاهرة', centers: [
+                    { id: 101, name: 'وسط البلد', address: '15 شارع رمسيس، القاهرة', location: 'https://goo.gl/maps/example1', notes: 'المكتب الرئيسي', code: 'CAI-01', shippingAllowed: true, employees: [
+                        { name: 'محمد أحمد', phone: '01012345678', shift: 'صباحي' },
+                        { name: 'علي حسن', phone: '01187654321', shift: 'مسائي' }
+                    ]},
+                    { id: 102, name: 'مدينة نصر', address: 'شارع عباس العقاد، القاهرة', location: 'https://goo.gl/maps/example2', notes: 'مكتب حيوي', code: 'CAI-02', shippingAllowed: true, employees: [
+                        { name: 'سارة محمود', phone: '01234567890', shift: 'صباحي' }
+                    ]}
+                ]},
+                { id: 2, name: 'الجيزة', centers: [
+                    { id: 201, name: 'الدقي', address: 'شارع التحرير، الجيزة', location: 'https://goo.gl/maps/example3', notes: 'مكتب الدقي', code: 'GIZ-01', shippingAllowed: false, employees: [] }
+                ]}
+            ],
+            busClasses: [
+                { id: 1, name: 'رويال بلس', capacity: 30, hospitality: 'نعم', screen: 'نعم', usb: 'نعم', wifi: 'نعم', images: ['https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800'], codes: ['BUS-101', 'BUS-102'] },
+                { id: 2, name: 'بريميوم', capacity: 45, hospitality: 'لا', screen: 'نعم', usb: 'نعم', wifi: 'لا', images: ['https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=800'], codes: ['BUS-201'] }
+            ],
+            shipping: [
+                { billNumber: '1001', customer: 'أحمد محمد علي', type: 'طرد ملابس', sender: 'محمود حسن', senderPhone: '01000000001', receiver: 'ياسين علي', receiverPhone: '01000000002', status: 'تم التسليم', details: 'طرد كبير الحجم' }
+            ],
+            trainingScripts: [
+                { 
+                    id: 'booking', 
+                    title: 'اسكربت الحجز الاحترافي', 
+                    icon: 'calendar-check', 
+                    content: [
+                        { role: 'اجينت', text: 'صباح الخير/ مساء الخير … اتوبيسي ... (اسم الموظف) مع حضرتك (مع مراعاة استبدال اتوبيسي بـ الحصان الذهبي حسب الـ Q)' },
+                        { role: 'العميل', text: 'صباح الخير / مساء الخير' },
+                        { role: 'اجينت', text: 'اتفضل يا فندم' },
+                        { role: 'العميل', text: 'لوسمحت عايز احجز / بستفسر عن مواعيد الرحلات من .. الى' },
+                        { role: 'اجينت', text: 'هتابع مع حضرتك حالا .. فى البداية اتشرف بالاسم' },
+                        { role: 'العميل', text: '...........' },
+                        { role: 'اجينت', text: 'اهلا وسهلا استاذ/استاذة ........ (مع مراعاة استخدام لقب العميل)' },
+                        { role: 'اجينت', text: 'فيه رحلة الساعة (...) على اتوبيس (...) سعر التذكرة (...) مناسبة لحضرتك؟' }
+                    ]
+                },
+                { 
+                    id: 'complaints', 
+                    title: 'اسكربت الشكاوى والنصوص الجاهزة', 
+                    icon: 'alert-triangle', 
+                    content: [
+                        { type: 'أعطال اتوبيس ونظافة', script: 'يشتكي العميل انه ( يتم كتابه تفاصيل الشكوي ) \n\n متلقى الشكوى * .........' },
+                        { type: 'أعطال شاشات', script: 'يشتكي العميل انه ( يتم كتابه تفاصيل الشكوي ) \n\n متلقى الشكوى * ......... \n ملحوظه هامه (برجاء كتابه رقم المقعد الخاص بالعميل فى المكان المخصص له)' },
+                        { type: 'فقد حقائب ومفقودات', script: 'يشتكي العميل انه ( كتابه الشئ المفقود وتفاصيله بالظبط ) \n ( يتم كتابه مواصفات الشنطه الخاصه بالعميل) + ( السيريال الخاص به) \n\n متلقى الشكوى * ......... \n ملحوظه : فى حاله فقدان شنطه برجاء اخذ محتويات الشنطه بالظبط' },
+                        { type: 'شكوى من السائق أو المضيف', script: 'يشتكي العميل انه ( يتم كتابه تفاصيل الشكوي ) \n\n متلقى الشكوى * .........' },
+                        { type: 'تأخر الاتوبيس', script: 'يشتكي العميل انه ( يتم كتابه تفاصيل الشكوي ) \n الباص اتحرك فى الساعة ........ \n متلقى الشكوى * .........' },
+                        { type: 'شكوى شحن', script: 'يشتكي العميل انه ( يتم كتابه تفاصيل الشكوي ) \n رقم بوليصة الشحن : ....... \n متلقى الشكوى * .........' }
+                    ]
+                }
+            ]
+        };
+
+        // Components
+        const Icon = ({ name, className = "w-5 h-5" }) => {
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }, [name]);
+            return <i data-lucide={name} className={className}></i>;
+        };
+
+        const Button = ({ children, onClick, variant = 'primary', className = '' }) => {
+            const variants = {
+                primary: 'bg-gradient-to-r from-amber-600 to-amber-400 hover:from-amber-500 hover:to-amber-300 text-black font-bold',
+                secondary: 'bg-zinc-800 hover:bg-zinc-700 text-white',
+                outline: 'border border-amber-500/50 hover:bg-amber-500/10 text-amber-500'
+            };
+            return (
+                <button 
+                    onClick={onClick} 
+                    className={`px-4 py-2 rounded-lg transition-all duration-300 active:scale-95 flex items-center justify-center gap-2 ${variants[variant]} ${className}`}
+                >
+                    {children}
+                </button>
+            );
+        };
+
+        const Input = ({ type = 'text', placeholder, value, onChange, icon }) => (
+            <div className="relative w-full">
+                {icon && <div className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500"><Icon name={icon} /></div>}
+                <input 
+                    type={type} 
+                    placeholder={placeholder} 
+                    value={value} 
+                    onChange={onChange}
+                    className={`w-full ${icon ? 'pr-10' : 'px-4'} py-3 rounded-xl search-input text-sm`}
+                />
+            </div>
+        );
+
+        // Views
+        const LoginView = ({ onLogin }) => {
+            const [userType, setUserType] = useState('employee'); // 'admin' or 'employee'
+            const [showForgot, setShowForgot] = useState(false);
+            const [techCode, setTechCode] = useState('');
+
+            const handleTechCheck = () => {
+                if(techCode === '2026') {
+                    alert('تم التحقق من التكنولوجيا المتقدمة.\nكلمة السر للمسؤول هي: admin123\nكلمة السر للموظف هي: employee123');
+                } else {
+                    alert('الكود غير صحيح، برجاء المحاولة مرة أخرى');
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#050505]">
+                    {/* 3D Decorative Elements */}
+                    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-500/10 blur-[120px] rounded-full"></div>
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-500/5 blur-[120px] rounded-full"></div>
+                    
+                    <motion.div 
+                        initial={{ opacity: 0, rotateY: -20, scale: 0.9 }}
+                        animate={{ opacity: 1, rotateY: 0, scale: 1 }}
+                        transition={{ duration: 0.8, type: 'spring' }}
+                        className="w-full max-w-md glass-panel p-10 rounded-[2.5rem] relative z-10 border-amber-500/20 card-3d"
+                    >
+                        <div className="text-center mb-10">
+                            <motion.div 
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ delay: 0.5 }}
+                                className="w-20 h-20 bg-gradient-to-tr from-amber-600 to-amber-300 rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-[0_0_30px_rgba(212,175,55,0.3)] rotate-12"
+                            >
+                                <Icon name="bus" className="w-10 h-10 text-black" />
+                            </motion.div>
+                            <h1 className="text-5xl font-bold gold-text mb-2 tracking-tighter">اتوبيسي</h1>
+                            <p className="text-zinc-500 text-sm font-light tracking-[0.3em] uppercase">Al Assema Luxury</p>
+                        </div>
+
+                        {!showForgot ? (
+                            <div className="space-y-6">
+                                <div className="flex p-1.5 bg-zinc-900/80 rounded-2xl mb-2 border border-zinc-800">
+                                    <button 
+                                        onClick={() => setUserType('employee')}
+                                        className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all duration-500 ${userType === 'employee' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                    >
+                                        موظف
+                                    </button>
+                                    <button 
+                                        onClick={() => setUserType('admin')}
+                                        className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all duration-500 ${userType === 'admin' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                    >
+                                        آدمن
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <Input placeholder="اسم المستخدم" icon="user" />
+                                    <Input type="password" placeholder="كلمة السر" icon="lock" />
+                                    
+                                    <div className="flex justify-between items-center px-1">
+                                        <button 
+                                            onClick={() => setShowForgot(true)}
+                                            className="text-xs text-amber-500/70 hover:text-amber-500 transition-colors flex items-center gap-1"
+                                        >
+                                            <Icon name="help-circle" className="w-3 h-3" /> نسيت كلمة السر؟
+                                        </button>
+                                    </div>
+
+                                    <Button onClick={() => onLogin(userType)} className="w-full py-5 rounded-2xl text-lg mt-2 shadow-[0_10px_20px_rgba(212,175,55,0.2)]">
+                                        دخول للنظام <Icon name="arrow-left" className="w-5 h-5" />
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                                <div className="text-center">
+                                    <h2 className="text-2xl font-bold text-white mb-2">استعادة ذكية</h2>
+                                    <p className="text-zinc-500 text-xs leading-relaxed">أدخل كود التكنولوجيا المتقدمة الممنوح لك من قبل الإدارة لاستعادة الوصول فوراً.</p>
+                                </div>
+                                <Input 
+                                    placeholder="كود التقنية (2026)" 
+                                    icon="cpu" 
+                                    value={techCode} 
+                                    onChange={(e) => setTechCode(e.target.value)} 
+                                />
+                                <div className="flex gap-3">
+                                    <Button variant="secondary" onClick={() => setShowForgot(false)} className="flex-1 py-4 rounded-2xl">إلغاء</Button>
+                                    <Button onClick={handleTechCheck} className="flex-1 py-4 rounded-2xl">تحقق ذكي</Button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </motion.div>
+                </div>
+            );
+        };
+
+        const Dashboard = ({ userType, onLogout }) => {
+            const [activeTab, setActiveTab] = useState('kb');
+            const [searchQuery, setSearchQuery] = useState('');
+
+            const menuItems = [
+                { id: 'kb', label: 'المركز الرئيسي (KB)', icon: 'database' },
+                { id: 'shipping', label: 'إدارة الشحن', icon: 'truck' },
+                { id: 'buses', label: 'فئات الأسطول', icon: 'bus-front' },
+                { id: 'training', label: 'أكاديمية التدريب', icon: 'award' },
+                { id: 'policy', label: 'السياسات المالية', icon: 'credit-card' },
+                { id: 'routes', label: 'شبكة الرحلات', icon: 'navigation-2' },
+                { id: 'open-return', label: 'العودة المفتوحة', icon: 'refresh-ccw' },
+                { id: 'settings', label: 'الإعدادات', icon: 'sliders' }
+            ];
+
+            return (
+                <div className="min-h-screen flex bg-[#030303]">
+                    {/* Sidebar */}
+                    <aside className="w-80 glass-panel border-l border-zinc-900/50 p-8 flex flex-col h-screen sticky top-0 z-20">
+                        <div className="mb-12 flex items-center gap-4">
+                            <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+                                <Icon name="bus" className="w-7 h-7 text-black" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black gold-text leading-none">اتوبيسي</h2>
+                                <p className="text-[9px] text-zinc-600 uppercase tracking-[0.4em] mt-1 font-bold">Smart KB System</p>
+                            </div>
+                        </div>
+
+                        <nav className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                            {menuItems.map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-500 group ${
+                                        activeTab === item.id 
+                                        ? 'bg-amber-500 text-black font-bold shadow-xl shadow-amber-500/10 scale-[1.02]' 
+                                        : 'text-zinc-500 hover:bg-zinc-900/50 hover:text-zinc-300'
+                                    }`}
+                                >
+                                    <Icon name={item.icon} className={`w-5 h-5 transition-transform group-hover:scale-110 ${activeTab === item.id ? 'text-black' : 'text-amber-500/50'}`} />
+                                    <span className="text-sm tracking-wide">{item.label}</span>
+                                </button>
+                            ))}
+                        </nav>
+
+                        <div className="mt-8 pt-8 border-t border-zinc-900">
+                            <div className="p-5 glass-panel rounded-[2rem] border-zinc-800/50 mb-6 bg-gradient-to-br from-white/[0.02] to-transparent">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative">
+                                        <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center text-amber-500 font-black text-xl border border-zinc-700 shadow-inner">
+                                            {userType === 'admin' ? 'A' : 'E'}
+                                        </div>
+                                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#030303] shadow-sm"></div>
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <p className="text-sm font-black truncate text-white uppercase tracking-tight">
+                                            {userType === 'admin' ? 'المدير العام' : 'موظف العمليات'}
+                                        </p>
+                                        <p className="text-[10px] text-zinc-500 font-medium">جلسة نشطة الآن</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={onLogout} 
+                                className="w-full py-4 rounded-2xl text-red-500/80 hover:text-red-400 hover:bg-red-500/5 transition-all flex items-center justify-center gap-3 text-sm font-bold border border-transparent hover:border-red-500/10"
+                            >
+                                <Icon name="power" className="w-4 h-4" /> إنهاء الجلسة
+                            </button>
+                        </div>
+                    </aside>
+
+                    {/* Main Content */}
+                    <main className="flex-1 p-10 overflow-y-auto relative">
+                        {/* Background Gradients */}
+                        <div className="absolute top-0 right-0 w-[50%] h-[50%] bg-amber-500/5 blur-[150px] -z-10 rounded-full"></div>
+                        
+                        <header className="flex justify-between items-center mb-12">
+                            <div>
+                                <h1 className="text-4xl font-black text-white mb-2 tracking-tight">
+                                    {menuItems.find(m => m.id === activeTab)?.label}
+                                </h1>
+                                <div className="flex items-center gap-2 text-zinc-500 text-sm font-medium">
+                                    <span className="w-8 h-[1px] bg-amber-500/50"></span>
+                                    إدارة العمليات اليومية لشركة اتوبيسي
+                                </div>
+                            </div>
+                            <div className="w-[450px]">
+                                <Input 
+                                    placeholder="ابحث عن مكاتب، بوالص، باصات أو اسكربتات..." 
+                                    icon="search" 
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                        </header>
+
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeTab}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ duration: 0.5, type: 'spring' }}
+                            >
+                                {activeTab === 'kb' && <KBView userType={userType} query={searchQuery} />}
+                                {activeTab === 'shipping' && <ShippingView userType={userType} query={searchQuery} />}
+                                {activeTab === 'buses' && <BusesView userType={userType} query={searchQuery} />}
+                                {activeTab === 'training' && <TrainingView userType={userType} query={searchQuery} />}
+                                {activeTab === 'policy' && <PolicyView userType={userType} query={searchQuery} />}
+                                {activeTab === 'routes' && <RoutesView userType={userType} query={searchQuery} />}
+                                {activeTab === 'open-return' && <OpenReturnView userType={userType} query={searchQuery} />}
+                                {activeTab === 'settings' && <SettingsView userType={userType} />}
+                            </motion.div>
+                        </AnimatePresence>
+                    </main>
+                </div>
+            );
+        };
+
+        const KBView = ({ userType, query }) => {
+            const [selectedGov, setSelectedGov] = useState(null);
+            const [selectedCenter, setSelectedCenter] = useState(null);
+
+            const filteredGovs = MOCK_DATA.governorates.filter(g => 
+                g.name.includes(query) || g.centers.some(c => c.name.includes(query) || c.code.includes(query))
+            );
+
+            return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-6">
+                        <h3 className="text-lg font-bold text-amber-500 flex items-center gap-2">
+                            <Icon name="map-pin" /> المحافظات والمراكز
+                        </h3>
+                        <div className="space-y-3">
+                            {filteredGovs.map(gov => (
+                                <div key={gov.id} className="glass-panel rounded-2xl overflow-hidden border-zinc-800">
+                                    <button 
+                                        onClick={() => setSelectedGov(selectedGov === gov.id ? null : gov.id)}
+                                        className="w-full px-6 py-4 flex justify-between items-center hover:bg-white/5 transition-colors"
+                                    >
+                                        <span className="font-bold text-lg">{gov.name}</span>
+                                        <Icon name={selectedGov === gov.id ? "chevron-up" : "chevron-down"} />
+                                    </button>
+                                    <AnimatePresence>
+                                        {selectedGov === gov.id && (
+                                            <motion.div 
+                                                initial={{ height: 0 }}
+                                                animate={{ height: 'auto' }}
+                                                exit={{ height: 0 }}
+                                                className="overflow-hidden bg-black/40 border-t border-zinc-800"
+                                            >
+                                                {gov.centers.map(center => (
+                                                    <button
+                                                        key={center.id}
+                                                        onClick={() => setSelectedCenter(center)}
+                                                        className={`w-full text-right px-8 py-3 text-sm hover:text-amber-500 transition-colors border-b border-zinc-900/50 last:border-0 ${selectedCenter?.id === center.id ? 'text-amber-500 bg-amber-500/5' : 'text-zinc-400'}`}
+                                                    >
+                                                        {center.name} - <span className="text-[10px] opacity-60">{center.code}</span>
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            ))}
+                        </div>
+                        {userType === 'admin' && (
+                            <Button className="w-full py-3 mt-4" variant="outline">
+                                <Icon name="plus" /> إضافة محافظة جديدة
+                            </Button>
+                        )}
+                    </div>
+
+                    <div className="space-y-6">
+                        <h3 className="text-lg font-bold text-amber-500 flex items-center gap-2">
+                            <Icon name="info" /> تفاصيل المكتب
+                        </h3>
+                        {selectedCenter ? (
+                            <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="glass-panel p-8 rounded-3xl border-amber-500/20 space-y-8"
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h4 className="text-2xl font-bold text-white mb-1">{selectedCenter.name}</h4>
+                                        <span className="px-2 py-1 bg-amber-500/10 text-amber-500 text-[10px] rounded border border-amber-500/20 font-bold uppercase">{selectedCenter.code}</span>
+                                    </div>
+                                    {userType === 'admin' && (
+                                        <div className="flex gap-2">
+                                            <Button variant="secondary" className="p-2"><Icon name="edit-2" /></Button>
+                                            <Button variant="secondary" className="p-2 text-red-400"><Icon name="trash-2" /></Button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-4 text-zinc-300">
+                                        <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-amber-500"><Icon name="map" /></div>
+                                        <div>
+                                            <p className="text-[10px] text-zinc-500">العنوان</p>
+                                            <p className="text-sm">{selectedCenter.address}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-zinc-300">
+                                        <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-amber-500"><Icon name="navigation" /></div>
+                                        <div>
+                                            <p className="text-[10px] text-zinc-500">اللوكيشن</p>
+                                            <a href={selectedCenter.location} target="_blank" className="text-sm text-blue-400 hover:underline">فتح الخريطة</a>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-zinc-300">
+                                        <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-amber-500"><Icon name="sticky-note" /></div>
+                                        <div>
+                                            <p className="text-[10px] text-zinc-500">ملاحظات</p>
+                                            <p className="text-sm">{selectedCenter.notes}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-zinc-300">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selectedCenter.shippingAllowed ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                            <Icon name={selectedCenter.shippingAllowed ? "check-circle" : "x-circle"} />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-zinc-500">حالة الشحن</p>
+                                            <p className="text-sm">{selectedCenter.shippingAllowed ? 'مسموح بنزول الشحن في هذا المكتب' : 'غير مسموح بنزول الشحن في هذا المكتب'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="pt-6 border-t border-zinc-800">
+                                    <h5 className="font-bold text-white mb-4 flex items-center gap-2">
+                                        <Icon name="users" /> الموظفون (الشيفتات)
+                                    </h5>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {selectedCenter.employees.map((emp, idx) => (
+                                            <div key={idx} className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50 flex justify-between items-center">
+                                                <div>
+                                                    <p className="font-bold text-sm">{emp.name}</p>
+                                                    <p className="text-xs text-zinc-500">{emp.phone}</p>
+                                                </div>
+                                                <span className={`px-2 py-1 rounded text-[10px] font-bold ${emp.shift === 'صباحي' ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                                                    {emp.shift}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {userType === 'admin' && (
+                                        <Button variant="outline" className="w-full mt-4 text-xs py-2">
+                                            <Icon name="user-plus" /> إضافة موظف للمكتب
+                                        </Button>
+                                    )}
+                                </div>
+                            </motion.div>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-zinc-600 glass-panel rounded-3xl border-dashed border-zinc-800 p-12 text-center">
+                                <Icon name="mouse-pointer-2" className="w-12 h-12 mb-4 opacity-20" />
+                                <p>برجاء اختيار محافظة ومركز لعرض التفاصيل</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const ShippingView = ({ userType, query }) => {
+            const [searchBill, setSearchBill] = useState('');
+            const [searchName, setSearchName] = useState('');
+            const [foundBill, setFoundBill] = useState(null);
+            const [showComplaintForm, setShowComplaintForm] = useState(false);
+            const [activeSubTab, setActiveSubTab] = useState('search'); // 'search', 'prices', 'prohibited'
+
+            const handleSearch = () => {
+                const result = MOCK_DATA.shipping.find(s => 
+                    (searchBill && s.billNumber === searchBill) || 
+                    (searchName && s.customer.includes(searchName))
+                );
+                setFoundBill(result || 'not_found');
+            };
+
+            return (
+                <div className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                        {/* Side Tools */}
+                        <div className="space-y-4">
+                            <button onClick={() => setActiveSubTab('search')} className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-all ${activeSubTab === 'search' ? 'bg-amber-500 text-black font-bold' : 'glass-panel text-zinc-500'}`}>
+                                <Icon name="search" className="w-5 h-5" /> بحث وتفاصيل
+                            </button>
+                            <button onClick={() => setActiveSubTab('prices')} className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-all ${activeSubTab === 'prices' ? 'bg-amber-500 text-black font-bold' : 'glass-panel text-zinc-500'}`}>
+                                <Icon name="dollar-sign" className="w-5 h-5" /> أسعار الشحن
+                            </button>
+                            <button onClick={() => setActiveSubTab('prohibited')} className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-all ${activeSubTab === 'prohibited' ? 'bg-amber-500 text-black font-bold' : 'glass-panel text-zinc-500'}`}>
+                                <Icon name="shield-alert" className="w-5 h-5" /> الممنوعات
+                            </button>
+                            <div className="pt-6 border-t border-zinc-900 mt-6">
+                                <Button variant="secondary" onClick={() => setShowComplaintForm(true)} className="w-full py-4 text-red-400 border border-red-500/10">
+                                    <Icon name="message-square-plus" /> تقديم شكوى شحن
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Main Content Area */}
+                        <div className="md:col-span-3">
+                            {activeSubTab === 'search' && (
+                                <div className="space-y-8">
+                                    <div className="glass-panel p-8 rounded-[2.5rem] border-zinc-800/50">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                            <Input placeholder="بحث برقم البوليصة..." value={searchBill} onChange={(e) => setSearchBill(e.target.value)} icon="file-text" />
+                                            <Input placeholder="بحث باسم العميل..." value={searchName} onChange={(e) => setSearchName(e.target.value)} icon="user" />
+                                        </div>
+                                        <Button onClick={handleSearch} className="w-full py-4 rounded-2xl shadow-lg">إظهار كافة التفاصيل</Button>
+                                    </div>
+
+                                    <AnimatePresence mode="wait">
+                                        {foundBill === 'not_found' && (
+                                            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="glass-panel p-16 rounded-[2.5rem] text-center border-red-500/10">
+                                                <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
+                                                    <Icon name="search-x" className="w-10 h-10" />
+                                                </div>
+                                                <h4 className="text-2xl font-bold mb-2">عذراً، لم نجد البوليصة</h4>
+                                                <p className="text-zinc-500">يرجى التأكد من البيانات المدخلة والمحاولة مرة أخرى</p>
+                                            </motion.div>
+                                        )}
+                                        {foundBill && foundBill !== 'not_found' && (
+                                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-panel p-10 rounded-[2.5rem] border-amber-500/20 relative overflow-hidden">
+                                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-600 to-amber-300"></div>
+                                                <div className="flex justify-between items-center mb-10">
+                                                    <div>
+                                                        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-1">تفاصيل الشحنة المعتمدة</p>
+                                                        <h3 className="text-3xl font-black flex items-center gap-4">
+                                                            <Icon name="package" className="text-amber-500 w-8 h-8" />
+                                                            {foundBill.billNumber}
+                                                        </h3>
+                                                    </div>
+                                                    <div className="px-6 py-2 bg-green-500/10 text-green-500 rounded-2xl border border-green-500/20 text-sm font-black">
+                                                        {foundBill.status}
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                                    <div className="space-y-8">
+                                                        <div className="p-6 bg-zinc-900/50 rounded-3xl border border-zinc-800">
+                                                            <p className="text-zinc-500 text-xs mb-4 flex items-center gap-2"><Icon name="user" className="w-3 h-3" /> بيانات الراسل</p>
+                                                            <p className="text-xl font-bold text-white mb-1">{foundBill.sender}</p>
+                                                            <p className="text-amber-500/70 font-mono text-sm">{foundBill.senderPhone}</p>
+                                                        </div>
+                                                        <div className="p-6 bg-zinc-900/50 rounded-3xl border border-zinc-800">
+                                                            <p className="text-zinc-500 text-xs mb-4 flex items-center gap-2"><Icon name="user-check" className="w-3 h-3" /> بيانات المرسل إليه</p>
+                                                            <p className="text-xl font-bold text-white mb-1">{foundBill.receiver}</p>
+                                                            <p className="text-amber-500/70 font-mono text-sm">{foundBill.receiverPhone}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-8">
+                                                        <div className="p-6 bg-zinc-900/50 rounded-3xl border border-zinc-800">
+                                                            <p className="text-zinc-500 text-xs mb-4 flex items-center gap-2"><Icon name="box" className="w-3 h-3" /> نوع الشحنة</p>
+                                                            <p className="text-xl font-bold text-white">{foundBill.type}</p>
+                                                        </div>
+                                                        <div className="p-6 bg-zinc-900/50 rounded-3xl border border-zinc-800">
+                                                            <p className="text-zinc-500 text-xs mb-4 flex items-center gap-2"><Icon name="info" className="w-3 h-3" /> ملاحظات إضافية</p>
+                                                            <p className="text-sm text-zinc-300 leading-relaxed">{foundBill.details}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            )}
+
+                            {activeSubTab === 'prices' && (
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-panel p-10 rounded-[2.5rem] border-zinc-800">
+                                    <h3 className="text-2xl font-bold mb-8 flex items-center gap-3"><Icon name="dollar-sign" className="text-amber-500" /> أسعار الشحن والطرود</h3>
+                                    <div className="space-y-4">
+                                        <div className="p-6 bg-zinc-900/50 rounded-2xl border border-zinc-800 flex justify-between items-center">
+                                            <span className="font-bold">طرد صغير (ملابس/أحذية)</span>
+                                            <span className="text-amber-500 font-black">50 - 100 ج.م</span>
+                                        </div>
+                                        <div className="p-6 bg-zinc-900/50 rounded-2xl border border-zinc-800 flex justify-between items-center">
+                                            <span className="font-bold">طرد متوسط (إلكترونيات)</span>
+                                            <span className="text-amber-500 font-black">150 - 300 ج.م</span>
+                                        </div>
+                                        <div className="p-6 bg-zinc-900/50 rounded-2xl border border-zinc-800 flex justify-between items-center">
+                                            <span className="font-bold">طرد كبير (أجهزة منزلية)</span>
+                                            <span className="text-amber-500 font-black">500+ ج.م</span>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {activeSubTab === 'prohibited' && (
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-panel p-10 rounded-[2.5rem] border-red-500/10">
+                                    <h3 className="text-2xl font-bold mb-8 flex items-center gap-3 text-red-500"><Icon name="shield-alert" /> المواد المحظور شحنها</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {['المواد القابلة للاشتعال', 'الأسلحة والذخائر', 'المواد المخدرة', 'العملات النقدية والمجوهرات', 'المواد الكيميائية الخطرة', 'الحيوانات الحية'].map((item, i) => (
+                                            <div key={i} className="p-4 bg-red-500/5 rounded-xl border border-red-500/10 flex items-center gap-3 text-zinc-400">
+                                                <Icon name="x-circle" className="w-4 h-4 text-red-500" /> {item}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="mt-8 p-6 bg-red-500/10 rounded-2xl border border-red-500/20">
+                                        <p className="text-red-500 text-sm font-bold flex items-center gap-2">
+                                            <Icon name="alert-triangle" /> تنبيه هام:
+                                        </p>
+                                        <p className="text-zinc-400 text-xs mt-2">في حالة ضبط أي من المواد المذكورة أعلاه، سيتم حظر الشحنة فوراً واتخاذ الإجراءات القانونية اللازمة.</p>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Complaint Modal */}
+                    <AnimatePresence>
+                        {showComplaintForm && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowComplaintForm(false)} className="absolute inset-0 bg-black/80 backdrop-blur-sm"></motion.div>
+                                <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="w-full max-w-lg glass-panel p-10 rounded-[3rem] border-amber-500/20 relative z-10">
+                                    <h3 className="text-2xl font-black mb-6">تقديم شكوى شحن</h3>
+                                    <div className="space-y-4">
+                                        <Input placeholder="رقم بوليصة الشحن" icon="file-digit" />
+                                        <Input placeholder="اسم العميل" icon="user" />
+                                        <textarea className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-sm min-h-[150px] focus:border-amber-500 outline-none" placeholder="تفاصيل الشكوى بالكامل..."></textarea>
+                                        <div className="flex gap-4 mt-4">
+                                            <Button variant="secondary" onClick={() => setShowComplaintForm(false)} className="flex-1 py-4 rounded-2xl">إلغاء</Button>
+                                            <Button className="flex-1 py-4 rounded-2xl" onClick={() => { alert('تم تسجيل الشكوى بنجاح وسيتم المتابعة فوراً'); setShowComplaintForm(false); }}>إرسال الشكوى</Button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        };
+
+        const BusesView = ({ userType, query }) => {
+            return (
+                <div className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {MOCK_DATA.busClasses.map(bus => (
+                            <motion.div key={bus.id} whileHover={{ y: -10 }} className="glass-panel rounded-3xl overflow-hidden border-zinc-800 hover:border-amber-500/30 transition-all">
+                                <div className="h-48 relative overflow-hidden">
+                                    <img src={bus.images[0]} className="w-full h-full object-cover" alt={bus.name} />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
+                                    <div className="absolute bottom-4 right-4">
+                                        <h4 className="text-2xl font-bold text-white">{bus.name}</h4>
+                                    </div>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-zinc-500">عدد الركاب:</span>
+                                        <span className="font-bold text-amber-500">{bus.capacity} راكب</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className={`p-2 rounded-xl border flex items-center gap-2 text-[10px] ${bus.hospitality === 'نعم' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+                                            <Icon name="coffee" className="w-3 h-3" /> ضيافة: {bus.hospitality}
+                                        </div>
+                                        <div className={`p-2 rounded-xl border flex items-center gap-2 text-[10px] ${bus.screen === 'نعم' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+                                            <Icon name="monitor" className="w-3 h-3" /> شاشة: {bus.screen}
+                                        </div>
+                                        <div className={`p-2 rounded-xl border flex items-center gap-2 text-[10px] ${bus.usb === 'نعم' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+                                            <Icon name="usb" className="w-3 h-3" /> USB: {bus.usb}
+                                        </div>
+                                        <div className={`p-2 rounded-xl border flex items-center gap-2 text-[10px] ${bus.wifi === 'نعم' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+                                            <Icon name="wifi" className="w-3 h-3" /> WiFi: {bus.wifi}
+                                        </div>
+                                    </div>
+                                    {userType === 'admin' && (
+                                        <div className="pt-4 border-t border-zinc-800 flex gap-2">
+                                            <Button variant="secondary" className="flex-1 py-2 text-xs">تعديل</Button>
+                                            <Button variant="outline" className="flex-1 py-2 text-xs">إدارة الصور</Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        ))}
+                        {userType === 'admin' && (
+                            <button className="glass-panel rounded-3xl border-dashed border-amber-500/20 flex flex-col items-center justify-center p-12 hover:bg-amber-500/5 transition-colors group">
+                                <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 mb-4 group-hover:scale-110 transition-transform">
+                                    <Icon name="plus" className="w-8 h-8" />
+                                </div>
+                                <span className="font-bold text-amber-500">إضافة فئة جديدة</span>
+                            </button>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const TrainingView = () => {
+            const [selectedScript, setSelectedScript] = useState(null);
+
+            return (
+                <div className="space-y-8">
+                    {!selectedScript ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {MOCK_DATA.trainingScripts.map((s, idx) => (
+                                <div key={idx} onClick={() => setSelectedScript(s)} className="glass-panel p-6 rounded-3xl border-zinc-800 hover:border-amber-500/30 transition-all cursor-pointer">
+                                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-4">
+                                        <Icon name={s.icon} />
+                                    </div>
+                                    <h4 className="text-xl font-bold mb-2">{s.title}</h4>
+                                    <p className="text-zinc-500 text-sm">عرض الاسكربت المنسق والتدريبات الخاصة</p>
+                                    <Button variant="outline" className="w-full mt-4 py-2 text-xs">فتح الاسكربت</Button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-panel p-8 rounded-3xl border-amber-500/20">
+                            <div className="flex justify-between items-center mb-8 pb-6 border-b border-zinc-800">
+                                <div className="flex items-center gap-4">
+                                    <Button variant="secondary" onClick={() => setSelectedScript(null)} className="p-2"><Icon name="arrow-right" /></Button>
+                                    <h3 className="text-2xl font-bold">{selectedScript.title}</h3>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4 custom-scrollbar">
+                                {selectedScript.id === 'booking' ? (
+                                    selectedScript.content.map((msg, i) => (
+                                        <div key={i} className={`flex ${msg.role === 'العميل' ? 'justify-start' : 'justify-end'}`}>
+                                            <div className={`max-w-[80%] p-4 rounded-2xl ${msg.role === 'العميل' ? 'bg-zinc-800 text-zinc-300' : 'bg-amber-500/20 border border-amber-500/30 text-white'}`}>
+                                                <p className="text-[10px] opacity-50 mb-1">{msg.role}</p>
+                                                <p className="text-sm">{msg.text}</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {selectedScript.content.map((item, i) => (
+                                            <div key={i} className="bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800">
+                                                <h5 className="font-bold text-amber-500 mb-3">{item.type}</h5>
+                                                <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-sans">{item.script}</pre>
+                                                <Button 
+                                                    variant="secondary" 
+                                                    className="mt-4 text-[10px]"
+                                                    onClick={() => navigator.clipboard.writeText(item.script)}
+                                                >
+                                                    <Icon name="copy" className="w-3 h-3" /> نسخ الاسكربت
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
+            );
+        };
+
+        const PolicyView = () => (
+            <div className="glass-panel rounded-3xl overflow-hidden border-zinc-800">
+                <table className="w-full text-right">
+                    <thead>
+                        <tr className="bg-zinc-900/50 border-b border-zinc-800">
+                            <th className="px-6 py-4 text-amber-500">طريقة الحجز</th>
+                            <th className="px-6 py-4 text-amber-500">طريقة الدفع</th>
+                            <th className="px-6 py-4 text-amber-500">التعديل</th>
+                            <th className="px-6 py-4 text-amber-500">الإلغاء</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/50">
+                        <tr>
+                            <td className="px-6 py-4 font-bold">خدمة العملاء</td>
+                            <td className="px-6 py-4 text-zinc-400">فوري / أمان</td>
+                            <td className="px-6 py-4 text-zinc-400">قبل 4 ساعات (خصم 15%)</td>
+                            <td className="px-6 py-4 text-zinc-400">قبل 4 ساعات (خصم 15%)</td>
+                        </tr>
+                        <tr>
+                            <td className="px-6 py-4 font-bold">المكتب</td>
+                            <td className="px-6 py-4 text-zinc-400">مباشر (نقدي/كريديت)</td>
+                            <td className="px-6 py-4 text-zinc-400">قبل 4 ساعات (خصم 15%)</td>
+                            <td className="px-6 py-4 text-zinc-400">قبل 4 ساعات (خصم 15%)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        );
+
+        const RoutesView = () => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="glass-panel p-8 rounded-3xl border-zinc-800">
+                    <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Icon name="search" /> استعلام عن رحلة</h3>
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs text-zinc-500 pr-2">من</label>
+                                <select className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm">
+                                    <option>القاهرة</option>
+                                    <option>الإسكندرية</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs text-zinc-500 pr-2">إلى</label>
+                                <select className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm">
+                                    <option>شرم الشيخ</option>
+                                    <option>الغردقة</option>
+                                </select>
+                            </div>
+                        </div>
+                        <Button className="w-full py-4">بحث عن المدة والمسار</Button>
+                    </div>
+                </div>
+                <div className="glass-panel p-8 rounded-3xl border-zinc-800 flex flex-col items-center justify-center text-zinc-600 border-dashed">
+                    <Icon name="map" className="w-16 h-16 mb-4 opacity-20" />
+                    <p>اختر المسار لعرض تفاصيل الرحلة</p>
+                </div>
+            </div>
+        );
+
+        const OpenReturnView = () => (
+            <div className="glass-panel p-8 rounded-3xl border-amber-500/20">
+                <div className="flex items-center gap-4 mb-8">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                        <Icon name="rotate-cw" className="w-8 h-8" />
+                    </div>
+                    <div>
+                        <h3 className="text-2xl font-bold text-white">خدمة العودة المفتوحة</h3>
+                        <p className="text-zinc-500">تفاصيل وشروط الخدمة</p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                        <h4 className="font-bold text-amber-500 border-b border-zinc-800 pb-2">عن الخدمة</h4>
+                        <ul className="space-y-3 text-zinc-300 text-sm">
+                            <li className="flex items-start gap-2"><Icon name="check-circle" className="w-4 h-4 text-green-500 mt-1 shrink-0" /> تتيح للعملاء حجز رحلة ذهاب وعودة بدون تحديد موعد العودة.</li>
+                            <li className="flex items-start gap-2"><Icon name="check-circle" className="w-4 h-4 text-green-500 mt-1 shrink-0" /> يتم حساب تذكرة العودة بنفس سعر فئة باص الذهاب.</li>
+                            <li className="flex items-start gap-2"><Icon name="check-circle" className="w-4 h-4 text-green-500 mt-1 shrink-0" /> يحصل العميل على خصم الذهاب والعودة.</li>
+                        </ul>
+                    </div>
+                    <div className="space-y-4">
+                        <h4 className="font-bold text-amber-500 border-b border-zinc-800 pb-2">الشروط والأحكام</h4>
+                        <ul className="space-y-3 text-zinc-300 text-sm">
+                            <li className="flex items-start gap-2"><Icon name="info" className="w-4 h-4 text-amber-500 mt-1 shrink-0" /> فترة سماح العودة المفتوحة لمدة 3 شهور من تاريخ حجز الذهاب.</li>
+                            <li className="flex items-start gap-2"><Icon name="info" className="w-4 h-4 text-amber-500 mt-1 shrink-0" /> غير مسموح بتأكيد العودة من اتوبيسي إلى Go Bus والعكس.</li>
+                            <li className="flex items-start gap-2"><Icon name="info" className="w-4 h-4 text-amber-500 mt-1 shrink-0" /> يتم دفع الفرق في حالة اختيار باص بفئة أعلى.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const SettingsView = ({ userType }) => (
+            <div className="max-w-2xl space-y-8">
+                <div className="glass-panel p-8 rounded-3xl border-zinc-800">
+                    <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Icon name="lock" /> تغيير كلمة السر</h3>
+                    <div className="space-y-4">
+                        <Input type="password" placeholder="كلمة السر الحالية" icon="shield-check" />
+                        <Input type="password" placeholder="كلمة السر الجديدة" icon="key" />
+                        <Input type="password" placeholder="تأكيد كلمة السر الجديدة" icon="key" />
+                        <Button className="w-full py-3">تحديث كلمة السر</Button>
+                    </div>
+                </div>
+                {userType === 'admin' && (
+                    <div className="glass-panel p-8 rounded-3xl border-amber-500/20">
+                        <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-amber-500"><Icon name="user-plus" /> إضافة آدمن جديد</h3>
+                        <div className="space-y-4">
+                            <Input placeholder="اسم المستخدم" icon="user" />
+                            <Input type="password" placeholder="كلمة السر" icon="lock" />
+                            <Button variant="outline" className="w-full py-3">إنشاء حساب آدمن</Button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+
+        // App Component
+        const App = () => {
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [userType, setUserType] = useState(null);
+
+            const handleLogin = (type) => {
+                setUserType(type);
+                setIsLoggedIn(true);
+            };
+
+            const handleLogout = () => {
+                setIsLoggedIn(false);
+                setUserType(null);
+            };
+
+            return (
+                <div className="min-h-screen">
+                    {!isLoggedIn ? (
+                        <LoginView onLogin={handleLogin} />
+                    ) : (
+                        <Dashboard userType={userType} onLogout={handleLogout} />
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
